@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>초성 퀴즈 챌린지</title>
-    <!-- CSS & Fonts -->
+    <!-- 1. CSS & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
@@ -15,31 +15,26 @@
         @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide { animation: slideIn 0.5s ease-out forwards; }
     </style>
-</head>
-<body>
-    <!-- 화면이 안 뜰 경우를 대비한 에러 표시용 컨테이너 -->
-    <div id="error-display" style="display:none; padding: 20px; color: red; font-weight: bold; text-align: center;">
-        로딩 중 오류가 발생했습니다. 개발자 도구(F12) 콘솔을 확인해주세요.
-    </div>
-    
-    <div id="root"></div>
 
-    <!-- React & Babel Loaders -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 2. React & Babel & Icons -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Main Logic -->
-    <script type="text/babel" data-type="module">
-        // Firebase Modular SDK
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    <!-- 3. Firebase Compat SDK (하얀 화면 해결의 핵심) -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div id="root"></div>
 
-        const { useState, useEffect, useCallback } = React;
+    <!-- 4. Main Logic -->
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
 
-        // 1. 제공된 Firebase 설정
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyB475AzDr96EP6I7YsyZx3OjnYDMuMaq7k",
             authDomain: "diabetes-sales.firebaseapp.com",
@@ -49,18 +44,15 @@
             appId: "1:778615949732:web:9dce345e16ae48a0cbd931"
         };
 
-        // 2. 초기화
-        let app, db, auth;
-        try {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-        } catch (e) {
-            console.error("Firebase 초기화 에러:", e);
-            document.getElementById('error-display').style.display = 'block';
+        // Firebase 안전 초기화 (Compat 방식)
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
         }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        const APP_ID = "hospital-quiz-master";
 
-        const APP_ID = "hospital-quiz-production";
         const DEFAULT_BRANDING = {
             title: '초성 퀴즈 챌린지',
             welcomeMsg: '병원명을 입력하고 입장하세요',
@@ -84,38 +76,34 @@
             const [userInput, setUserInput] = useState('');
             const [feedback, setFeedback] = useState({ text: '', type: '' });
 
-            // 인증 처리
+            // 1. 익명 로그인
             useEffect(() => {
-                const unsubAuth = onAuthStateChanged(auth, (u) => {
-                    if (u) {
-                        setUser(u);
-                        setIsReady(true);
-                    } else {
-                        signInAnonymously(auth).catch(console.error);
-                    }
+                auth.signInAnonymously().catch(console.error);
+                const unsubAuth = auth.onAuthStateChanged((u) => {
+                    setUser(u);
+                    if (u) setIsReady(true);
                 });
                 return () => unsubAuth();
             }, []);
 
-            // 데이터 실시간 바인딩
+            // 2. 실시간 데이터 연동
             useEffect(() => {
                 if (!user) return;
 
-                const brandingRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings');
-                const quizCol = collection(db, 'artifacts', APP_ID, 'public', 'data', 'quizzes');
-                const logCol = collection(db, 'artifacts', APP_ID, 'public', 'data', 'logs');
+                // 브랜딩 연동
+                const unsubBranding = db.doc(`artifacts/${APP_ID}/public/data/settings`).onSnapshot((snap) => {
+                    if (snap.exists) setBranding(prev => ({ ...prev, ...snap.data() }));
+                    else db.doc(`artifacts/${APP_ID}/public/data/settings`).set(DEFAULT_BRANDING);
+                });
 
-                const unsubBranding = onSnapshot(brandingRef, (snap) => {
-                    if (snap.exists()) setBranding(prev => ({ ...prev, ...snap.data() }));
-                    else setDoc(brandingRef, DEFAULT_BRANDING);
-                }, (err) => console.error("Firestore 권한 오류 가능성:", err));
-
-                const unsubQuizzes = onSnapshot(quizCol, (snap) => {
+                // 퀴즈 연동
+                const unsubQuizzes = db.collection(`artifacts/${APP_ID}/public/data/quizzes`).onSnapshot((snap) => {
                     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setQuizzes(data.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
                 });
 
-                const unsubLogs = onSnapshot(logCol, (snap) => {
+                // 로그 연동
+                const unsubLogs = db.collection(`artifacts/${APP_ID}/public/data/logs`).onSnapshot((snap) => {
                     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setLogs(data.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
                 });
@@ -128,13 +116,24 @@
                 setTimeout(() => setToast({ msg: '', type: '' }), 2500);
             };
 
+            const onFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 1024 * 400) return showToast("400KB 이하 이미지만 가능합니다.", "error");
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    db.doc(`artifacts/${APP_ID}/public/data/settings`).update({ logoBase64: reader.result });
+                };
+                reader.readAsDataURL(file);
+            };
+
             const onAnswerSubmit = async (e) => {
                 e.preventDefault();
                 const target = quizzes[currentIndex];
                 if (!target) return;
                 const isCorrect = userInput.trim() === target.answer;
 
-                await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'logs'), {
+                await db.collection(`artifacts/${APP_ID}/public/data/logs`).add({
                     hospital: hospitalName,
                     initials: target.fullText,
                     submitted: userInput.trim(),
@@ -156,15 +155,6 @@
                 }
             };
 
-            const onFileUpload = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                if (file.size > 1024 * 300) return showToast("300KB 이하 이미지만 가능합니다.", "error");
-                const reader = new FileReader();
-                reader.onloadend = () => updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings'), { logoBase64: reader.result });
-                reader.readAsDataURL(file);
-            };
-
             const exportCSV = () => {
                 const headers = ['병원명', '초성', '답안', '결과', '시간'];
                 const rows = logs.map(l => [l.hospital, l.initials, l.submitted, l.isCorrect ? '정답' : '오답', l.time]);
@@ -172,23 +162,22 @@
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
-                link.download = `quiz_report.csv`;
+                link.download = `quiz_report_${new Date().toLocaleDateString()}.csv`;
                 link.click();
             };
 
             const Icon = ({ name, size = 20, color = "currentColor", className = "" }) => {
-                useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, branding]);
+                useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
                 return <i data-lucide={name} style={{ width: size, height: size, color }} className={className}></i>;
             };
 
             if (!isReady) return (
                 <div className="min-h-screen flex flex-col items-center justify-center bg-white">
                     <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-slate-400 font-bold">네트워크 연결 중...</p>
+                    <p className="text-slate-400 font-bold">시스템 연결 중...</p>
                 </div>
             );
 
-            // 뷰 렌더링
             if (view === 'login') return (
                 <div className="min-h-screen flex items-center justify-center p-6">
                     {toast.msg && <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[999] px-6 py-3 rounded-full bg-slate-800 text-white font-bold animate-bounce shadow-xl">{toast.msg}</div>}
@@ -210,6 +199,7 @@
 
             if (view === 'admin_gate') return (
                 <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
+                    {toast.msg && <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[999] px-6 py-3 rounded-full bg-slate-800 text-white font-bold animate-bounce shadow-xl">{toast.msg}</div>}
                     <div className="w-full max-w-xs bg-white rounded-[3rem] p-10 text-center shadow-2xl animate-slide">
                         <Icon name="key" size={56} className="mx-auto mb-6 text-indigo-500" />
                         <h2 className="text-2xl font-black mb-8 tracking-widest uppercase">Admin Auth</h2>
@@ -230,7 +220,7 @@
                                 <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg"><Icon name="layout-dashboard" size={28}/></div>
                                 <div>
                                     <h1 className="text-2xl font-black text-slate-800 tracking-tighter uppercase leading-none">Admin Panel</h1>
-                                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1 opacity-60">Realtime Database</p>
+                                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1 opacity-60">Firebase Cloud System</p>
                                 </div>
                             </div>
                             <button onClick={() => setView('login')} className="w-full md:w-auto px-10 py-3 bg-slate-100 rounded-2xl font-black text-slate-500 hover:bg-slate-200 text-xs tracking-wider uppercase transition-all">Logout</button>
@@ -240,15 +230,15 @@
                             <div className="bg-white p-8 rounded-[2.5rem] border shadow-sm space-y-6 overflow-hidden">
                                 <h3 className="text-sm font-black flex items-center gap-2 border-b pb-4 uppercase tracking-widest text-indigo-600"><Icon name="palette" size={16}/> Branding</h3>
                                 <div className="space-y-4">
-                                    <input type="text" value={branding.title} onChange={e => updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings'), {title: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-black outline-none" placeholder="타이틀" />
+                                    <input type="text" value={branding.title} onChange={e => db.doc(`artifacts/${APP_ID}/public/data/settings`).update({title: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-black outline-none" placeholder="타이틀" />
                                     <div className="flex items-center gap-4">
-                                        <input type="color" value={branding.primaryColor} onChange={e => updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings'), {primaryColor: e.target.value})} className="w-14 h-14 rounded-2xl cursor-pointer border-none shadow-sm p-0 overflow-hidden" />
+                                        <input type="color" value={branding.primaryColor} onChange={e => db.doc(`artifacts/${APP_ID}/public/data/settings`).update({primaryColor: e.target.value})} className="w-14 h-14 rounded-2xl cursor-pointer border-none shadow-sm p-0 overflow-hidden" />
                                         <div className="flex-1">
                                             <input type="file" accept="image/*" onChange={onFileUpload} className="hidden" id="logo-upload" />
                                             <label htmlFor="logo-upload" className="block w-full py-4 bg-indigo-50 text-indigo-600 text-center rounded-2xl text-xs font-black cursor-pointer hover:bg-indigo-100 transition-all">Logo Upload</label>
                                         </div>
                                     </div>
-                                    {branding.logoBase64 && <button onClick={() => updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings'), {logoBase64: ''})} className="w-full py-2 text-xs text-red-400 font-bold border rounded-xl border-red-50">로고 삭제</button>}
+                                    {branding.logoBase64 && <button onClick={() => db.doc(`artifacts/${APP_ID}/public/data/settings`).update({logoBase64: ''})} className="w-full py-2 text-xs text-red-400 font-bold border rounded-xl border-red-50">로고 삭제</button>}
                                 </div>
                             </div>
 
@@ -259,7 +249,7 @@
                                     const q = e.target.initials.value.trim();
                                     const a = e.target.answer.value.trim();
                                     if (q.length !== 4) return showToast("초성 4자만!", "error");
-                                    await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'quizzes'), { fullText: q, initials: q.split(''), answer: a, createdAt: Date.now() });
+                                    await db.collection(`artifacts/${APP_ID}/public/data/quizzes`).add({ fullText: q, initials: q.split(''), answer: a, createdAt: Date.now() });
                                     e.target.reset();
                                     showToast("추가됨!");
                                 }} className="flex flex-col gap-3 my-6">
@@ -274,7 +264,7 @@
                                                 <div className="text-indigo-600 font-black text-xl tracking-[0.2em]">{q.fullText}</div>
                                                 <div className="text-[10px] text-slate-400 font-bold italic mt-1">{q.answer}</div>
                                             </div>
-                                            <button onClick={() => deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'quizzes', q.id))} className="p-3 text-slate-200 hover:text-red-500 transition-colors"><Icon name="trash" size={18}/></button>
+                                            <button onClick={() => db.doc(`artifacts/${APP_ID}/public/data/quizzes/${q.id}`).delete()} className="p-3 text-slate-200 hover:text-red-500 transition-colors"><Icon name="trash" size={18}/></button>
                                         </div>
                                     ))}
                                 </div>
