@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>초성 퀴즈 챌린지</title>
     
-    <!-- 1. 필수 라이브러리 (순서가 매우 중요합니다) -->
+    <!-- 1. 라이브러리 로드 (절대 순서 변경 금지) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 2. 파이어베이스 (안정성이 보장된 구형 로드 방식) -->
+    <!-- 2. 파이어베이스 Compat (구형이지만 배포 환경에서 가장 안정적임) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; margin: 0; padding: 0; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -27,19 +27,18 @@
     </style>
 </head>
 <body>
-    <!-- 하얀 화면 방지용 가드 -->
     <div id="root">
-        <div style="height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #6366f1; font-weight: bold;">
-            <p>화면을 불러오는 중입니다...</p>
-            <p style="font-size: 12px; color: #cbd5e1; margin-top: 10px;">(계속 하얀 화면이면 새로고침을 해주세요)</p>
+        <!-- 초기 로딩 화면 (흰 화면 방지) -->
+        <div style="height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #4f46e5; font-weight: bold;">
+            <p style="font-size: 20px;">시스템 연결 중...</p>
+            <p style="font-size: 12px; color: #cbd5e1; margin-top: 10px;">잠시만 기다려주세요</p>
         </div>
     </div>
 
     <script type="text/babel">
-        // 전역 변수에서 React 꺼내기
         const { useState, useEffect, useRef } = React;
 
-        // --- [설정] 파이어베이스 정보 ---
+        // --- 파이어베이스 설정 ---
         const firebaseConfig = {
             apiKey: "AIzaSyB475AzDr96EP6I7YsyZx3OjnYDMuMaq7k",
             authDomain: "diabetes-sales.firebaseapp.com",
@@ -49,13 +48,13 @@
             appId: "1:778615949732:web:9dce345e16ae48a0cbd931"
         };
 
-        // 초기화
+        // 초기화 가드
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
         const auth = firebase.auth();
-        const APP_ID = "hospital-quiz-master-final";
+        const APP_ID = "hospital-quiz-master-v2";
 
         const DEFAULT_BRANDING = {
             title: '초성 퀴즈 챌린지',
@@ -64,25 +63,25 @@
             logoBase64: ''
         };
 
-        // 아이콘 (SVG 인라인 직접 주입)
+        // 안전한 인라인 SVG 아이콘
         const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
-            const path = {
+            const paths = {
                 building: "M3 21h18M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7M4 21V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v17",
-                settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z",
+                settings: "M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0 M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z",
                 key: "M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zM12 7l.347 1.13a1 1 0 0 0 .95.708H14.5l-1.01 1.13a1 1 0 0 0-.347 1.13L13.5 12",
                 trash: "M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",
                 download: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"
             };
             return (
                 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                    <path d={path[name]}></path>
+                    <path d={paths[name]}></path>
                 </svg>
             );
         };
 
         function App() {
             const [isReady, setIsReady] = useState(false);
-            const [view, setView] = useState('login'); // login, game, admin_gate, admin_panel
+            const [view, setView] = useState('login'); 
             const [hospital, setHospital] = useState('');
             const [adminPw, setAdminPw] = useState('');
             const [toast, setToast] = useState('');
@@ -95,34 +94,39 @@
             const [userInput, setUserInput] = useState('');
             const [feedback, setFeedback] = useState({ text: '', type: '' });
 
-            // 1. 익명 인증
+            // 1. 초기 인증
             useEffect(() => {
                 auth.signInAnonymously()
                     .then(() => setIsReady(true))
                     .catch(e => { console.error(e); setIsReady(true); });
             }, []);
 
-            // 2. 실시간 동기화
+            // 2. 실시간 동기화 (경로 에러 수정 핵심 로직)
             useEffect(() => {
                 if (!isReady) return;
                 
-                const unsub1 = db.doc(`artifacts/${APP_ID}/public/data/settings`).onSnapshot(s => {
+                // 설정 경로를 짝수(6개)로 수정: artifacts/{id}/public/data/settings/main
+                const brandingPath = `artifacts/${APP_ID}/public/data/settings/main`;
+                
+                const unsub1 = db.doc(brandingPath).onSnapshot(s => {
                     if (s.exists) setBranding(s.data());
-                    else db.doc(`artifacts/${APP_ID}/public/data/settings`).set(DEFAULT_BRANDING);
-                });
+                    else db.doc(brandingPath).set(DEFAULT_BRANDING);
+                }, err => console.error("Path Error:", err));
 
                 const unsub2 = db.collection(`artifacts/${APP_ID}/public/data/quizzes`).onSnapshot(s => {
-                    setQuizzes(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => a.createdAt - b.createdAt));
+                    const list = s.docs.map(d => ({id: d.id, ...d.data()}));
+                    setQuizzes(list.sort((a,b) => (a.createdAt || 0) - (b.createdAt || 0)));
                 });
 
                 const unsub3 = db.collection(`artifacts/${APP_ID}/public/data/logs`).onSnapshot(s => {
-                    setLogs(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.timestamp - a.timestamp));
+                    const list = s.docs.map(d => ({id: d.id, ...d.data()}));
+                    setLogs(list.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)));
                 });
 
                 return () => { unsub1(); unsub2(); unsub3(); };
             }, [isReady]);
 
-            const msg = (t) => { setToast(t); setTimeout(() => setToast(''), 2000); };
+            const notify = (t) => { setToast(t); setTimeout(() => setToast(''), 2000); };
 
             const onAnswer = async (e) => {
                 e.preventDefault();
@@ -137,42 +141,35 @@
 
                 if (isCorrect) {
                     setFeedback({ text: '정답입니다! 🎉', type: 'success' });
-                    setTimeout(() => { setUserInput(''); setFeedback({text:'',type:''}); setCurrentIndex(p => (p+1)%quizzes.length); }, 1000);
+                    setTimeout(() => { 
+                        setUserInput(''); 
+                        setFeedback({text:'',type:''}); 
+                        setCurrentIndex(p => quizzes.length > 0 ? (p + 1) % quizzes.length : 0); 
+                    }, 1000);
                 } else {
                     setFeedback({ text: '틀렸습니다! ❌', type: 'error' });
                     setTimeout(() => setFeedback({text:'',type:''}), 1000);
                 }
             };
 
-            const exportCSV = () => {
-                const headers = ['병원명', '초성', '답안', '결과', '시간'];
-                const rows = logs.map(l => [l.hospital, l.initials, l.submitted, l.isCorrect ? 'O' : 'X', l.time]);
-                const csv = "\ufeff" + [headers, ...rows].map(r => r.join(",")).join("\n");
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = `quiz_report.csv`;
-                link.click();
-            };
-
             if (!isReady) return null;
 
-            // --- 렌더링 ---
+            // --- 뷰 렌더링 ---
 
             if (view === 'login') return (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
                     <div className="w-full max-w-sm bg-white rounded-[3rem] shadow-2xl p-10 flex flex-col items-center">
                         <div className="mb-8">
-                            {branding.logoBase64 ? <img src={branding.logoBase64} className="h-20 w-auto rounded-xl" /> : 
+                            {branding.logoBase64 ? <img src={branding.logoBase64} className="h-20 w-auto rounded-xl shadow-sm" /> : 
                             <div className="p-8 rounded-[2rem] text-white shadow-xl" style={{backgroundColor: branding.primaryColor}}><Icon name="building" size={48} /></div>}
                         </div>
                         <h1 className="text-2xl font-black text-slate-800 text-center mb-2 tracking-tighter">{branding.title}</h1>
-                        <p className="text-slate-400 text-sm text-center mb-10">{branding.welcomeMsg}</p>
+                        <p className="text-slate-400 text-sm text-center mb-10 opacity-70">{branding.welcomeMsg}</p>
                         <form onSubmit={e => { e.preventDefault(); if(hospital.trim()) setView('game'); }} className="w-full space-y-4">
-                            <input type="text" value={hospital} onChange={e => setHospital(e.target.value)} placeholder="병원명 입력" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center" required />
+                            <input type="text" value={hospital} onChange={e => setHospital(e.target.value)} placeholder="병원명 입력" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
                             <button type="submit" className="w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg active:scale-95 transition-transform" style={{backgroundColor: branding.primaryColor}}>입장하기</button>
                         </form>
-                        <button onClick={() => setView('admin_gate')} className="mt-12 text-slate-300 text-xs font-bold flex items-center gap-1 opacity-50 hover:opacity-100"><Icon name="settings" size={14}/> 관리자</button>
+                        <button onClick={() => setView('admin_gate')} className="mt-12 text-slate-300 text-xs font-bold flex items-center gap-1 opacity-50 hover:opacity-100"><Icon name="settings" size={14}/> 관리자 모드</button>
                     </div>
                 </div>
             );
@@ -182,63 +179,82 @@
                     <div className="w-full max-w-xs bg-white rounded-[2rem] p-10 text-center shadow-2xl">
                         <Icon name="key" size={48} color="#4f46e5" className="mx-auto mb-4" />
                         <h2 className="text-xl font-black mb-6 uppercase">ADMIN LOCK</h2>
-                        <input type="password" value={adminPw} onChange={e => setAdminPw(e.target.value)} placeholder="PASSWORD (1024)" className="w-full p-4 bg-slate-100 rounded-xl text-center font-bold tracking-widest mb-6 outline-none" autoFocus />
+                        <input type="password" value={adminPw} onChange={e => setAdminPw(e.target.value)} placeholder="PASSWORD (1024)" className="w-full p-4 bg-slate-100 rounded-xl text-center font-bold tracking-widest mb-6 outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
                         <div className="flex gap-2">
                             <button onClick={() => setView('login')} className="flex-1 py-3 text-slate-400 font-bold">취소</button>
-                            <button onClick={() => adminPw === '1024' ? setView('admin_panel') : alert("틀림")} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>
+                            <button onClick={() => adminPw === '1024' ? setView('admin_panel') : alert("비밀번호가 틀렸습니다.")} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>
                         </div>
                     </div>
                 </div>
             );
 
             if (view === 'admin_panel') return (
-                <div className="min-h-screen bg-slate-50 p-4 pb-20">
-                    <div className="max-w-6xl mx-auto space-y-6">
-                        <div className="bg-white p-6 rounded-3xl shadow-sm flex justify-between items-center border">
-                            <h1 className="text-xl font-black text-slate-800">ADMIN PANEL</h1>
-                            <button onClick={() => setView('login')} className="px-6 py-2 bg-slate-100 rounded-xl font-bold text-slate-500 text-xs">나가기</button>
+                <div className="min-h-screen bg-slate-50 p-4 pb-20 overflow-x-hidden">
+                    <div className="max-w-7xl mx-auto space-y-6">
+                        <div className="bg-white p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 border">
+                            <h1 className="text-xl font-black text-slate-800">ADMIN CONTROL</h1>
+                            <button onClick={() => setView('login')} className="w-full sm:w-auto px-8 py-2 bg-slate-100 rounded-xl font-bold text-slate-500 text-xs tracking-widest">EXIT</button>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="bg-white p-6 rounded-3xl border space-y-4">
-                                <h3 className="font-black text-indigo-600 border-b pb-2">기본 설정</h3>
-                                <input type="text" value={branding.title} onChange={e => db.doc(`artifacts/${APP_ID}/public/data/settings`).update({title: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl text-sm font-bold" placeholder="제목" />
+                            {/* 설정 */}
+                            <div className="bg-white p-6 rounded-3xl border shadow-sm space-y-4">
+                                <h3 className="font-black text-indigo-600 border-b pb-2 uppercase text-xs tracking-widest">Branding</h3>
+                                <input type="text" value={branding.title} onChange={e => db.doc(`artifacts/${APP_ID}/public/data/settings/main`).update({title: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl text-sm font-bold" placeholder="제목" />
                                 <div className="flex items-center gap-2">
-                                    <input type="color" value={branding.primaryColor} onChange={e => db.doc(`artifacts/${APP_ID}/public/data/settings`).update({primaryColor: e.target.value})} className="w-10 h-10 rounded-lg cursor-pointer border-none" />
+                                    <input type="color" value={branding.primaryColor} onChange={e => db.doc(`artifacts/${APP_ID}/public/data/settings/main`).update({primaryColor: e.target.value})} className="w-10 h-10 rounded-lg cursor-pointer border-none" />
                                     <input type="file" accept="image/*" onChange={e => {
                                         const r = new FileReader();
-                                        r.onload = () => db.doc(`artifacts/${APP_ID}/public/data/settings`).update({logoBase64: r.result});
+                                        r.onload = () => db.doc(`artifacts/${APP_ID}/public/data/settings/main`).update({logoBase64: r.result});
                                         r.readAsDataURL(e.target.files[0]);
-                                    }} className="text-[10px]" />
+                                    }} className="flex-1 text-[10px]" />
                                 </div>
                             </div>
+                            {/* 퀴즈 */}
                             <div className="bg-white p-6 rounded-3xl border flex flex-col h-[500px]">
-                                <h3 className="font-black text-indigo-600 border-b pb-2 mb-4">문제 리스트</h3>
+                                <h3 className="font-black text-indigo-600 border-b pb-2 mb-4 uppercase text-xs tracking-widest">Quiz Bank</h3>
                                 <form onSubmit={async e => {
                                     e.preventDefault();
                                     const q = e.target.q.value; const a = e.target.a.value;
+                                    if(q.length !== 4) return alert("초성 4자!");
                                     await db.collection(`artifacts/${APP_ID}/public/data/quizzes`).add({ full: q, chars: q.split(''), answer: a, createdAt: Date.now() });
                                     e.target.reset();
-                                }} className="space-y-2 mb-4">
-                                    <input name="q" placeholder="초성 4자" maxLength={4} className="w-full p-3 bg-slate-50 rounded-xl font-black text-center uppercase" required />
+                                }} className="space-y-2 mb-4 flex flex-col">
+                                    <input name="q" placeholder="초성 4자" maxLength={4} className="w-full p-3 bg-slate-50 rounded-xl font-black text-center uppercase tracking-widest" required />
                                     <input name="a" placeholder="정답" className="w-full p-3 bg-slate-50 rounded-xl font-bold" required />
-                                    <button type="submit" className="w-full py-3 bg-slate-800 text-white rounded-xl font-black text-sm">추가</button>
+                                    <button type="submit" className="w-full py-3 bg-slate-800 text-white rounded-xl font-black text-sm">ADD QUIZ</button>
                                 </form>
                                 <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                                     {quizzes.map(q => (
-                                        <div key={q.id} className="p-3 bg-slate-50 rounded-2xl flex justify-between items-center">
-                                            <span className="font-black text-indigo-600">{q.full}</span>
-                                            <button onClick={() => db.doc(`artifacts/${APP_ID}/public/data/quizzes/${q.id}`).delete()} className="text-red-400 p-2"><Icon name="trash" size={16}/></button>
+                                        <div key={q.id} className="p-3 bg-slate-50 rounded-2xl flex justify-between items-center group">
+                                            <div>
+                                                <span className="font-black text-indigo-600 tracking-widest">{q.full}</span>
+                                                <p className="text-[10px] text-slate-400 font-bold">{q.answer}</p>
+                                            </div>
+                                            <button onClick={() => db.doc(`artifacts/${APP_ID}/public/data/quizzes/${q.id}`).delete()} className="text-slate-300 hover:text-red-400 p-2"><Icon name="trash" size={16}/></button>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            <div className="bg-white p-6 rounded-3xl border flex flex-col h-[500px]">
-                                <div className="flex justify-between border-b pb-2 mb-4"><h3 className="font-black text-indigo-600">참여 기록</h3><button onClick={exportCSV}><Icon name="download" size={16}/></button></div>
+                            {/* 기록 */}
+                            <div className="bg-white p-6 rounded-3xl border flex flex-col h-[500px] overflow-hidden">
+                                <div className="flex justify-between items-center border-b pb-2 mb-4">
+                                    <h3 className="font-black text-indigo-600 uppercase text-xs tracking-widest">User Log</h3>
+                                    <button onClick={() => {
+                                        const headers = ['병원명', '초성', '답안', '결과', '시간'];
+                                        const rows = logs.map(l => [l.hospital, l.initials, l.submitted, l.isCorrect ? 'O' : 'X', l.time]);
+                                        const csv = "\ufeff" + [headers, ...rows].map(r => r.join(",")).join("\n");
+                                        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                                        const link = document.createElement("a");
+                                        link.href = URL.createObjectURL(blob);
+                                        link.download = `quiz_report.csv`;
+                                        link.click();
+                                    }}><Icon name="download" size={16} className="text-emerald-500"/></button>
+                                </div>
                                 <div className="flex-1 overflow-x-auto custom-scrollbar">
-                                    <table className="w-full text-xs text-left">
-                                        <thead><tr className="text-slate-400"><th>병원</th><th>답안</th><th className="text-right">결과</th></tr></thead>
+                                    <table className="w-full text-[10px] text-left min-w-[280px]">
+                                        <thead className="bg-slate-50 text-slate-400 uppercase font-black"><tr><th className="p-2">Hosp</th><th className="p-2 text-center">Ans</th><th className="p-2 text-right">RST</th></tr></thead>
                                         <tbody className="divide-y">
-                                            {logs.map(l => (<tr key={l.id}><td className="py-2 font-bold truncate max-w-[80px]">{l.hospital}</td><td className="py-2 text-center">{l.submitted}</td><td className="py-2 text-right">{l.isCorrect ? 'O' : 'X'}</td></tr>))}
+                                            {logs.map(l => (<tr key={l.id} className="hover:bg-slate-50"><td className="py-3 font-bold truncate max-w-[80px]">{l.hospital}</td><td className="py-3 text-center">{l.submitted}</td><td className="py-3 text-right">{l.isCorrect ? 'O' : 'X'}</td></tr>))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -250,16 +266,18 @@
 
             const target = quizzes[currentIndex];
             return (
-                <div className="min-h-screen flex items-center justify-center p-4 transition-all" style={{backgroundColor: branding.primaryColor}}>
-                    <div className="w-full max-w-md bg-white rounded-[4rem] shadow-2xl p-10 sm:p-14 relative flex flex-col min-h-[700px]">
-                        <div className="absolute top-0 left-0 w-full h-3 bg-slate-100"><div className="h-full" style={{width: `${quizzes.length > 0 ? ((currentIndex + 1) / quizzes.length) * 100 : 0}%`, backgroundColor: branding.primaryColor}} /></div>
+                <div className="min-h-screen flex items-center justify-center p-4 transition-all duration-1000" style={{backgroundColor: branding.primaryColor}}>
+                    <div className="w-full max-w-md bg-white rounded-[4rem] shadow-2xl p-10 sm:p-14 relative flex flex-col min-h-[750px] border border-white/20 overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-3 bg-slate-100">
+                            <div className="h-full transition-all duration-1000" style={{width: `${quizzes.length > 0 ? ((currentIndex + 1) / quizzes.length) * 100 : 0}%`, backgroundColor: branding.primaryColor}} />
+                        </div>
                         <div className="flex justify-between items-center mb-10">
-                            <span className="px-4 py-1 bg-slate-50 rounded-full text-[10px] font-black text-slate-400 border uppercase">{hospital}</span>
+                            <span className="px-4 py-1 bg-slate-50 rounded-full text-[10px] font-black text-slate-400 border uppercase shadow-inner truncate max-w-[150px]">{hospital}</span>
                             <span className="font-black text-xl" style={{color: branding.primaryColor}}>{quizzes.length > 0 ? currentIndex + 1 : 0} / {quizzes.length}</span>
                         </div>
                         {target ? (
                             <div className="flex-1 flex flex-col items-center justify-center animate-slide">
-                                <div className="mb-10 flex flex-col gap-3 w-full max-w-[110px]">
+                                <div className="mb-10 flex flex-col gap-3 w-full max-w-[120px]">
                                     {target.chars.map((c, i) => (
                                         <div key={i} className="aspect-square bg-slate-50 rounded-[2rem] flex items-center justify-center border-4 border-slate-100 shadow-xl">
                                             <span className="text-6xl font-black" style={{color: branding.primaryColor}}>{c}</span>
@@ -268,12 +286,12 @@
                                 </div>
                                 <div className="h-10 mb-2 font-black text-indigo-600 animate-bounce">{feedback.text}</div>
                                 <form onSubmit={onAnswer} className="w-full space-y-6">
-                                    <input type="text" value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="정답 입력" className="w-full text-center text-4xl font-black py-4 border-b-4 bg-transparent outline-none uppercase placeholder:text-slate-100" autoFocus />
-                                    <button type="submit" className="w-full py-6 rounded-[2.5rem] text-white text-2xl font-black shadow-xl" style={{backgroundColor: branding.primaryColor}}>제출하기</button>
+                                    <input type="text" value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="정답 입력" className="w-full text-center text-4xl font-black py-4 border-b-4 bg-transparent outline-none uppercase placeholder:text-slate-100" autoFocus autoComplete="off" />
+                                    <button type="submit" className="w-full py-6 rounded-[2.5rem] text-white text-2xl font-black shadow-xl active:scale-[0.97] transition-all" style={{backgroundColor: branding.primaryColor}}>SUBMIT</button>
                                 </form>
                             </div>
-                        ) : <div className="flex-1 flex flex-col items-center justify-center text-slate-200">문제가 없습니다.</div>}
-                        <button onClick={() => { setView('login'); setHospital(''); }} className="mt-14 text-slate-300 text-[10px] font-black uppercase text-center tracking-widest">Exit Game</button>
+                        ) : <div className="flex-1 flex flex-col items-center justify-center text-slate-200">문제가 준비되지 않았습니다.</div>}
+                        <button onClick={() => { setView('login'); setHospital(''); }} className="mt-14 text-slate-300 text-[10px] font-black uppercase text-center tracking-widest transition-colors hover:text-slate-500">Exit Game</button>
                     </div>
                 </div>
             );
