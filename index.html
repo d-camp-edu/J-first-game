@@ -58,7 +58,7 @@
 
         const DEFAULT_BRANDING = {
             title: '초성 퀴즈 챌린지',
-            welcomeMsg: '병원명을 입력하고 입장하세요',
+            welcomeMsg: '정보를 입력하고 입장하세요',
             primaryColor: '#4f46e5',
             logoBase64: ''
         };
@@ -81,8 +81,11 @@
 
         function App() {
             const [isReady, setIsReady] = useState(false);
-            const [view, setView] = useState('login'); 
-            const [hospital, setHospital] = useState('');
+            const [view, setView] = useState('login');
+            const [division, setDivision] = useState('');
+            const [team, setTeam] = useState('');
+            const [employeeId, setEmployeeId] = useState('');
+            const [manager, setManager] = useState('');
             const [adminPw, setAdminPw] = useState('');
             const [toast, setToast] = useState('');
             
@@ -135,7 +138,8 @@
                 const isCorrect = userInput.trim() === target.answer;
 
                 await db.collection(`artifacts/${APP_ID}/public/data/logs`).add({
-                    hospital, initials: target.full, submitted: userInput.trim(),
+                    division, team, employeeId, manager,
+                    initials: target.full, submitted: userInput.trim(),
                     isCorrect, timestamp: Date.now(), time: new Date().toLocaleString()
                 });
 
@@ -165,8 +169,11 @@
                         </div>
                         <h1 className="text-2xl font-black text-slate-800 text-center mb-2 tracking-tighter">{branding.title}</h1>
                         <p className="text-slate-400 text-sm text-center mb-10 opacity-70">{branding.welcomeMsg}</p>
-                        <form onSubmit={e => { e.preventDefault(); if(hospital.trim()) setView('game'); }} className="w-full space-y-4">
-                            <input type="text" value={hospital} onChange={e => setHospital(e.target.value)} placeholder="병원명 입력" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                        <form onSubmit={e => { e.preventDefault(); if(division.trim() && team.trim() && employeeId.trim() && manager.trim()) setView('game'); }} className="w-full space-y-3">
+                            <input type="text" value={division} onChange={e => setDivision(e.target.value)} placeholder="사업부명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                            <input type="text" value={team} onChange={e => setTeam(e.target.value)} placeholder="팀명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                            <input type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} placeholder="사번" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                            <input type="text" value={manager} onChange={e => setManager(e.target.value)} placeholder="담당자명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
                             <button type="submit" className="w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg active:scale-95 transition-transform" style={{backgroundColor: branding.primaryColor}}>입장하기</button>
                         </form>
                         <button onClick={() => setView('admin_gate')} className="mt-12 text-slate-300 text-xs font-bold flex items-center gap-1 opacity-50 hover:opacity-100"><Icon name="settings" size={14}/> 관리자 모드</button>
@@ -240,8 +247,8 @@
                                 <div className="flex justify-between items-center border-b pb-2 mb-4">
                                     <h3 className="font-black text-indigo-600 uppercase text-xs tracking-widest">User Log</h3>
                                     <button onClick={() => {
-                                        const headers = ['병원명', '초성', '답안', '결과', '시간'];
-                                        const rows = logs.map(l => [l.hospital, l.initials, l.submitted, l.isCorrect ? 'O' : 'X', l.time]);
+                                        const headers = ['사업부명', '팀명', '사번', '담당자명', '초성', '답안', '결과', '시간'];
+                                        const rows = logs.map(l => [l.division || '', l.team || '', l.employeeId || '', l.manager || l.hospital || '', l.initials, l.submitted, l.isCorrect ? 'O' : 'X', l.time]);
                                         const csv = "\ufeff" + [headers, ...rows].map(r => r.join(",")).join("\n");
                                         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                                         const link = document.createElement("a");
@@ -252,9 +259,9 @@
                                 </div>
                                 <div className="flex-1 overflow-x-auto custom-scrollbar">
                                     <table className="w-full text-[10px] text-left min-w-[280px]">
-                                        <thead className="bg-slate-50 text-slate-400 uppercase font-black"><tr><th className="p-2">Hosp</th><th className="p-2 text-center">Ans</th><th className="p-2 text-right">RST</th></tr></thead>
+                                        <thead className="bg-slate-50 text-slate-400 uppercase font-black"><tr><th className="p-2">담당자</th><th className="p-2 text-center">Ans</th><th className="p-2 text-right">RST</th></tr></thead>
                                         <tbody className="divide-y">
-                                            {logs.map(l => (<tr key={l.id} className="hover:bg-slate-50"><td className="py-3 font-bold truncate max-w-[80px]">{l.hospital}</td><td className="py-3 text-center">{l.submitted}</td><td className="py-3 text-right">{l.isCorrect ? 'O' : 'X'}</td></tr>))}
+                                            {logs.map(l => (<tr key={l.id} className="hover:bg-slate-50"><td className="py-3 font-bold truncate max-w-[80px]">{l.manager || l.hospital}</td><td className="py-3 text-center">{l.submitted}</td><td className="py-3 text-right">{l.isCorrect ? 'O' : 'X'}</td></tr>))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -272,7 +279,7 @@
                             <div className="h-full transition-all duration-1000" style={{width: `${quizzes.length > 0 ? ((currentIndex + 1) / quizzes.length) * 100 : 0}%`, backgroundColor: branding.primaryColor}} />
                         </div>
                         <div className="flex justify-between items-center mb-10">
-                            <span className="px-4 py-1 bg-slate-50 rounded-full text-[10px] font-black text-slate-400 border uppercase shadow-inner truncate max-w-[150px]">{hospital}</span>
+                            <span className="px-4 py-1 bg-slate-50 rounded-full text-[10px] font-black text-slate-400 border uppercase shadow-inner truncate max-w-[150px]">{manager}</span>
                             <span className="font-black text-xl" style={{color: branding.primaryColor}}>{quizzes.length > 0 ? currentIndex + 1 : 0} / {quizzes.length}</span>
                         </div>
                         {target ? (
@@ -291,7 +298,7 @@
                                 </form>
                             </div>
                         ) : <div className="flex-1 flex flex-col items-center justify-center text-slate-200">문제가 준비되지 않았습니다.</div>}
-                        <button onClick={() => { setView('login'); setHospital(''); }} className="mt-14 text-slate-300 text-[10px] font-black uppercase text-center tracking-widest transition-colors hover:text-slate-500">Exit Game</button>
+                        <button onClick={() => { setView('login'); setDivision(''); setTeam(''); setEmployeeId(''); setManager(''); }} className="mt-14 text-slate-300 text-[10px] font-black uppercase text-center tracking-widest transition-colors hover:text-slate-500">Exit Game</button>
                     </div>
                 </div>
             );
