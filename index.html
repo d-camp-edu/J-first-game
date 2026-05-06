@@ -82,10 +82,11 @@
         function App() {
             const [isReady, setIsReady] = useState(false);
             const [view, setView] = useState('login');
-            const [division, setDivision] = useState('');
-            const [team, setTeam] = useState('');
             const [employeeId, setEmployeeId] = useState('');
             const [manager, setManager] = useState('');
+            const [clientCode, setClientCode] = useState('');
+            const [clientName, setClientName] = useState('');
+            const [doctorName, setDoctorName] = useState('');
             const [adminPw, setAdminPw] = useState('');
             const [toast, setToast] = useState('');
             
@@ -138,7 +139,7 @@
                 const isCorrect = userInput.trim() === target.answer;
 
                 await db.collection(`artifacts/${APP_ID}/public/data/logs`).add({
-                    division, team, employeeId, manager,
+                    employeeId, manager, clientCode, clientName, doctorName,
                     initials: target.full, submitted: userInput.trim(),
                     isCorrect, timestamp: Date.now(), time: new Date().toLocaleString()
                 });
@@ -169,11 +170,12 @@
                         </div>
                         <h1 className="text-2xl font-black text-slate-800 text-center mb-2 tracking-tighter">{branding.title}</h1>
                         <p className="text-slate-400 text-sm text-center mb-10 opacity-70">{branding.welcomeMsg}</p>
-                        <form onSubmit={e => { e.preventDefault(); if(division.trim() && team.trim() && employeeId.trim() && manager.trim()) setView('game'); }} className="w-full space-y-3">
-                            <input type="text" value={division} onChange={e => setDivision(e.target.value)} placeholder="사업부명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
-                            <input type="text" value={team} onChange={e => setTeam(e.target.value)} placeholder="팀명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
-                            <input type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} placeholder="사번" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                        <form onSubmit={e => { e.preventDefault(); if(employeeId.trim() && manager.trim() && clientCode.trim() && clientName.trim() && doctorName.trim()) setView('game'); }} className="w-full space-y-3">
+                            <input type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} placeholder="담당자 사번" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
                             <input type="text" value={manager} onChange={e => setManager(e.target.value)} placeholder="담당자명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                            <input type="text" value={clientCode} onChange={e => setClientCode(e.target.value)} placeholder="거래처코드" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                            <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="거래처명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                            <input type="text" value={doctorName} onChange={e => setDoctorName(e.target.value)} placeholder="원장님 성함" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
                             <button type="submit" className="w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg active:scale-95 transition-transform" style={{backgroundColor: branding.primaryColor}}>입장하기</button>
                         </form>
                         <button onClick={() => setView('admin_gate')} className="mt-12 text-slate-300 text-xs font-bold flex items-center gap-1 opacity-50 hover:opacity-100"><Icon name="settings" size={14}/> 관리자 모드</button>
@@ -186,10 +188,10 @@
                     <div className="w-full max-w-xs bg-white rounded-[2rem] p-10 text-center shadow-2xl">
                         <Icon name="key" size={48} color="#4f46e5" className="mx-auto mb-4" />
                         <h2 className="text-xl font-black mb-6 uppercase">ADMIN LOCK</h2>
-                        <input type="password" value={adminPw} onChange={e => setAdminPw(e.target.value)} placeholder="PASSWORD (1024)" className="w-full p-4 bg-slate-100 rounded-xl text-center font-bold tracking-widest mb-6 outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
+                        <input type="password" value={adminPw} onChange={e => setAdminPw(e.target.value)} placeholder="PASSWORD" className="w-full p-4 bg-slate-100 rounded-xl text-center font-bold tracking-widest mb-6 outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
                         <div className="flex gap-2">
                             <button onClick={() => setView('login')} className="flex-1 py-3 text-slate-400 font-bold">취소</button>
-                            <button onClick={() => adminPw === '1024' ? setView('admin_panel') : alert("비밀번호가 틀렸습니다.")} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>
+                            <button onClick={() => btoa(adminPw) === 'MTAyNA==' ? setView('admin_panel') : alert("비밀번호가 틀렸습니다.")} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold">확인</button>
                         </div>
                     </div>
                 </div>
@@ -298,7 +300,7 @@
                                 </form>
                             </div>
                         ) : <div className="flex-1 flex flex-col items-center justify-center text-slate-200">문제가 준비되지 않았습니다.</div>}
-                        <button onClick={() => { setView('login'); setDivision(''); setTeam(''); setEmployeeId(''); setManager(''); }} className="mt-14 text-slate-300 text-[10px] font-black uppercase text-center tracking-widest transition-colors hover:text-slate-500">Exit Game</button>
+                        <button onClick={() => { setView('login'); setEmployeeId(''); setManager(''); setClientCode(''); setClientName(''); setDoctorName(''); }} className="mt-14 text-slate-300 text-[10px] font-black uppercase text-center tracking-widest transition-colors hover:text-slate-500">Exit Game</button>
                     </div>
                 </div>
             );
