@@ -84,6 +84,7 @@
             const [view, setView] = useState('login');
             const [employeeId, setEmployeeId] = useState('');
             const [manager, setManager] = useState('');
+            const [contact, setContact] = useState('');
             const [clientCode, setClientCode] = useState('');
             const [clientName, setClientName] = useState('');
             const [doctorName, setDoctorName] = useState('');
@@ -139,7 +140,7 @@
                 const isCorrect = userInput.trim() === target.answer;
 
                 await db.collection(`artifacts/${APP_ID}/public/data/logs`).add({
-                    employeeId, manager, clientCode, clientName, doctorName,
+                    employeeId, manager, contact, clientCode, clientName, doctorName,
                     initials: target.full, submitted: userInput.trim(),
                     isCorrect, timestamp: Date.now(), time: new Date().toLocaleString()
                 });
@@ -170,9 +171,10 @@
                         </div>
                         <h1 className="text-2xl font-black text-slate-800 text-center mb-2 tracking-tighter">{branding.title}</h1>
                         <p className="text-slate-400 text-sm text-center mb-10 opacity-70">{branding.welcomeMsg}</p>
-                        <form onSubmit={e => { e.preventDefault(); if(employeeId.trim() && manager.trim() && clientCode.trim() && clientName.trim() && doctorName.trim()) setView('game'); }} className="w-full space-y-3">
+                        <form onSubmit={e => { e.preventDefault(); if(employeeId.trim() && manager.trim() && contact.trim() && clientCode.trim() && clientName.trim() && doctorName.trim()) setView('game'); }} className="w-full space-y-3">
                             <input type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} placeholder="담당자 사번" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
                             <input type="text" value={manager} onChange={e => setManager(e.target.value)} placeholder="담당자명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
+                            <input type="tel" value={contact} onChange={e => setContact(e.target.value)} placeholder="담당자 연락처" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
                             <input type="text" value={clientCode} onChange={e => setClientCode(e.target.value)} placeholder="거래처코드" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
                             <input type="text" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="거래처명" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
                             <input type="text" value={doctorName} onChange={e => setDoctorName(e.target.value)} placeholder="선생님 성함" className="w-full px-6 py-4 bg-slate-50 border rounded-2xl outline-none font-bold text-center focus:ring-2 focus:ring-indigo-500 transition-all" required />
@@ -300,7 +302,7 @@
                                 </form>
                             </div>
                         ) : <div className="flex-1 flex flex-col items-center justify-center text-slate-200">문제가 준비되지 않았습니다.</div>}
-                        <button onClick={() => { setView('login'); setEmployeeId(''); setManager(''); setClientCode(''); setClientName(''); setDoctorName(''); }} className="mt-14 text-slate-300 text-[10px] font-black uppercase text-center tracking-widest transition-colors hover:text-slate-500">Exit Game</button>
+                        <button onClick={() => { setView('login'); setEmployeeId(''); setManager(''); setContact(''); setClientCode(''); setClientName(''); setDoctorName(''); }} className="mt-14 text-slate-300 text-[10px] font-black uppercase text-center tracking-widest transition-colors hover:text-slate-500">Exit Game</button>
                     </div>
                 </div>
             );
